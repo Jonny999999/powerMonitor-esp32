@@ -32,7 +32,7 @@
 
 
 //===== Variables =====
-static const char *TAG = "ESP_A-poti";
+static const char *TAG = "PMon-main";
 esp_mqtt_client_handle_t mqtt_client;
 uint8_t mqtt_current_qos_level = 0;
 
@@ -82,12 +82,6 @@ void wifi_init_sta(void) {
 }
 
 
-void buzzer_beep() {
-    gpio_set_level(BUZZER_GPIO, 1);
-    vTaskDelay(pdMS_TO_TICKS(30));
-    gpio_set_level(BUZZER_GPIO, 0);
-}
-
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -97,35 +91,35 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
-            ESP_LOGI(TAG, "MQTT connected, subscribing to 'button'");
-            esp_mqtt_client_subscribe(event->client, "button", mqtt_current_qos_level);
-            esp_mqtt_client_subscribe(event->client, "qos-level", 2);
+            //ESP_LOGI(TAG, "MQTT connected, subscribing to 'button'");
+            //esp_mqtt_client_subscribe(event->client, "button", mqtt_current_qos_level);
+            //esp_mqtt_client_subscribe(event->client, "qos-level", 2);
             break;
 
         case MQTT_EVENT_DATA:
             ESP_LOGI(TAG, "Received topic: %.*s | data: %.*s",
                      event->topic_len, event->topic,
                      event->data_len, event->data);
-            if (strncmp(event->topic, "button", event->topic_len) == 0) {
-                buzzer_beep();
-                ESP_LOGI(TAG, "button topic received!");
-            }
-            else if (strncmp(event->topic, "qos-level", event->topic_len) == 0) {
-                static char raw[10];     // incoming payload
-                int len = event->data_len;
-                if (len > sizeof(raw) - 1) len = sizeof(raw) - 1;
-                memcpy(raw, event->data, len);
-                raw[len] = '\0';
-                ESP_LOGI(TAG, "qos-level topic received! data: %s", raw);
-                mqtt_current_qos_level = atoi(raw);
-                ESP_LOGW(TAG, "changed qos level to %d", mqtt_current_qos_level);
-                for (int i=0; i < mqtt_current_qos_level+1; i++){ // level 0 = 1 beep
-                    buzzer_beep();
-                    vTaskDelay(pdMS_TO_TICKS(100));
-                }
-                ESP_LOGW(TAG, "re-subscribing topic 'button' with new qos level...");
-                esp_mqtt_client_subscribe(event->client, "button", mqtt_current_qos_level);
-            }
+            //if (strncmp(event->topic, "button", event->topic_len) == 0) {
+            //    buzzer_beep();
+            //    ESP_LOGI(TAG, "button topic received!");
+            //}
+            //else if (strncmp(event->topic, "qos-level", event->topic_len) == 0) {
+            //    static char raw[10];     // incoming payload
+            //    int len = event->data_len;
+            //    if (len > sizeof(raw) - 1) len = sizeof(raw) - 1;
+            //    memcpy(raw, event->data, len);
+            //    raw[len] = '\0';
+            //    ESP_LOGI(TAG, "qos-level topic received! data: %s", raw);
+            //    mqtt_current_qos_level = atoi(raw);
+            //    ESP_LOGW(TAG, "changed qos level to %d", mqtt_current_qos_level);
+            //    for (int i=0; i < mqtt_current_qos_level+1; i++){ // level 0 = 1 beep
+            //        buzzer_beep();
+            //        vTaskDelay(pdMS_TO_TICKS(100));
+            //    }
+            //    ESP_LOGW(TAG, "re-subscribing topic 'button' with new qos level...");
+            //    esp_mqtt_client_subscribe(event->client, "button", mqtt_current_qos_level);
+            //}
             break;
 
         case MQTT_EVENT_SUBSCRIBED:
@@ -167,80 +161,103 @@ static void mqtt_app_start(void)
 }
 
 
-static void publish_poti_task(void *arg) {
-    const int threshold = 10;
-    const int slow_publish_interval_ms = 10000;
-    const int check_interval_ms = 25;
-    const int adc_sample_count = 150;
+typedef struct {
+    const char *name;               // For logging
+    uint8_t modbus_addr;            // Modbus address (slave ID)
+    gpio_num_t tx_pin;
+    gpio_num_t rx_pin;
+    const char *mqtt_topic_prefix;  // e.g. "sensor1"
+    int publish_interval_ms;        // Interval for MQTT publishing
+} ModbusSensor;
 
-    int last_sent_value = -threshold;
-    int last_publish_time = 0;
+
+// configure connected power sensors
+#define NUM_SENSORS 2
+#define UART_PORT UART_NUM_2
+ModbusSensor sensors[NUM_SENSORS] = {
+    {
+        .name = "Sensor 1",
+        .modbus_addr = 1,
+        .tx_pin = GPIO_NUM_17,
+        .rx_pin = GPIO_NUM_16,
+        .mqtt_topic_prefix = "sensor1",
+        .publish_interval_ms = 5000,
+    },
+    {
+        .name = "Sensor 2",
+        .modbus_addr = 2,
+        .tx_pin = GPIO_NUM_25,
+        .rx_pin = GPIO_NUM_26,
+        .mqtt_topic_prefix = "sensor2",
+        .publish_interval_ms = 7000,
+    }
+};
+
+
+
+
+void PMonTask(void *arg) {
+    int64_t last_publish_time[NUM_SENSORS] = {0};
+    _current_values_t pzValues;
 
     while (1) {
-        uint32_t sum = 0;
-        for (int i = 0; i < adc_sample_count; i++){
-            sum += adc1_get_raw(ADC_CHANNEL);
-        }
-        int raw = sum / adc_sample_count;
-        
-        int diff = abs(raw - last_sent_value);
-        int now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        int64_t now = esp_timer_get_time() / 1000;
 
-        if (last_sent_value == -1 || diff > threshold || (now - last_publish_time >= slow_publish_interval_ms)) {
-            char msg[32];
-            snprintf(msg, sizeof(msg), "%d", raw);
-            esp_mqtt_client_publish(mqtt_client, "poti", msg, 0, mqtt_current_qos_level, 0);
-            last_sent_value = raw;
-            last_publish_time = now;
-            ESP_LOGI(TAG, "Published value: %d", raw);
+        for (int i = 0; i < NUM_SENSORS; i++) {
+            if ((now - last_publish_time[i]) >= sensors[i].publish_interval_ms) {
+
+                ESP_LOGI(TAG, "[%s] Initializing sensor at addr=0x%02X on TX=%d, RX=%d",
+                         sensors[i].name,
+                         sensors[i].modbus_addr,
+                         sensors[i].tx_pin,
+                         sensors[i].rx_pin);
+
+                // Create new config for this sensor
+                pzem_setup_t config = {
+                    .pzem_uart   = UART_PORT,
+                    .pzem_rx_pin = sensors[i].rx_pin,
+                    .pzem_tx_pin = sensors[i].tx_pin,
+                    .pzem_addr   = sensors[i].modbus_addr
+                };
+
+                // Initialize pins/config
+                PzemInit(&config);
+
+                // Log before read
+                ESP_LOGI(TAG, "[%s] Starting read from sensor addr=0x%02X", sensors[i].name, sensors[i].modbus_addr);
+
+                if (PzemGetValues(&config, &pzValues)) {
+                    ESP_LOGI(TAG, "[%s] Read success", sensors[i].name);
+                    printf("[%s] Vrms: %.1fV - Irms: %.3fA - P: %.1fW - E: %.2fWh\n", sensors[i].name, pzValues.voltage, pzValues.current, pzValues.power, pzValues.energy);
+                    printf("[%s] Freq: %.1fHz - PF: %.2f\n", sensors[i].name, pzValues.frequency, pzValues.pf);
+
+                    // Example MQTT publish (optional)
+                    // char topic[64], payload[64];
+                    // snprintf(topic, sizeof(topic), "%s/voltage", sensors[i].mqtt_topic_prefix);
+                    // snprintf(payload, sizeof(payload), "%.1f", pzValues.voltage);
+                    // esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+
+                } else {
+                    ESP_LOGW(TAG, "[%s] Failed to read sensor at addr=0x%02X", sensors[i].name, sensors[i].modbus_addr);
+                }
+
+                last_publish_time[i] = now;
+            }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(check_interval_ms));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
+
+    vTaskDelete(NULL);
 }
 
 
 
 
-
-
-pzem_setup_t pzConf =
-{
-    .pzem_uart   = UART_NUM_2,              /*  <== Specify the UART you want to use, UART_NUM_0, UART_NUM_1, UART_NUM_2 (ESP32 specific) */
-    .pzem_rx_pin = GPIO_NUM_16,             /*  <== GPIO for RX */
-    .pzem_tx_pin = GPIO_NUM_17,             /*  <== GPIO for TX */
-    .pzem_addr   = PZ_DEFAULT_ADDRESS,      /*  If your module has a different address, specify here or update the variable in pzem004tv3.h */
-};
-
-TaskHandle_t PMonTHandle = NULL;
-_current_values_t pzValues;            /* Measured values */
-
-void PMonTask( void * pz );
 
 void app_main()
 {
-    /* Initialize/Configure UART */
-    PzemInit( &pzConf );
-
-    xTaskCreate( PMonTask, "PowerMon", ( 256 * 8 ), NULL, tskIDLE_PRIORITY, &PMonTHandle );
-}
-
-
-
-void PMonTask( void * pz )
-{
-    for( ;; )
-    {
-        PzemGetValues( &pzConf, &pzValues );
-        printf( "Vrms: %.1fV - Irms: %.3fA - P: %.1fW - E: %.2fWh\n", pzValues.voltage, pzValues.current, pzValues.power, pzValues.energy );
-        printf( "Freq: %.1fHz - PF: %.2f\n", pzValues.frequency, pzValues.pf );
-
-        ESP_LOGI( TAG, "Stack High Water Mark: %ld Bytes free", ( unsigned long int ) uxTaskGetStackHighWaterMark( NULL ) );     /* Show's what's left of the specified stacksize */
-
-        vTaskDelay( pdMS_TO_TICKS( 2500 ) );
-    }
-
-    vTaskDelete( NULL );
+    xTaskCreate(PMonTask, "PowerMonitor", 4096, NULL, 5, NULL);
 }
 
 

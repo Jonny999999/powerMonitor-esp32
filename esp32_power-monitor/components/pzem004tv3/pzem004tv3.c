@@ -34,6 +34,9 @@ void PzemInit( pzem_setup_t *pzSetup )
         .source_clk = UART_SCLK_APB,
     };
 
+    // Try deleting the driver first (no-op if not installed) useful in case sensor/uart gets re-initialized with different config
+    uart_driver_delete(_uart_num);
+
     int intr_alloc_flags = 0;
 
 #if CONFIG_UART_ISR_IN_IRAM
