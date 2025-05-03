@@ -17,14 +17,15 @@
 
 
 //===== CONFIG =====
-#define WIFI_SSID "E14_mqtt-broker"
+#include "config.h" //actual wifi credentials outsourced
+//#define WIFI_SSID "E14_mqtt-broker"
 //#define WIFI_PASS "mqttdemo" // comment out if open wifi
 #define WIFI_USE_STATIC_IP       1
-#define WIFI_STATIC_IP_ADDR      "192.168.0.111"
-#define WIFI_STATIC_NETMASK_ADDR "255.255.255.0"
-#define WIFI_STATIC_GW_ADDR      "192.168.0.1"
+#define WIFI_STATIC_IP_ADDR      "10.0.0.81"
+#define WIFI_STATIC_NETMASK_ADDR "255.255.0.0"
+#define WIFI_STATIC_GW_ADDR      "10.0.0.1"
 
-#define MQTT_BROKER_URI "mqtt://192.168.0.1"  // replace with your laptop IP
+#define MQTT_BROKER_URI "mqtt://10.0.0.102"  // replace with your laptop IP
 
 #define BUZZER_GPIO 14
 #define ADC_CHANNEL ADC1_CHANNEL_6 // GPIO34
@@ -34,7 +35,6 @@
 //===== Variables =====
 static const char *TAG = "PMon-main";
 esp_mqtt_client_handle_t mqtt_client;
-uint8_t mqtt_current_qos_level = 0;
 
 
 
@@ -161,6 +161,7 @@ static void mqtt_app_start(void)
 }
 
 
+// struct for configuring one connected PZEM-004T sensor
 typedef struct {
     const char *name;               // For logging
     uint8_t modbus_addr;            // Modbus address (slave ID)
@@ -171,31 +172,51 @@ typedef struct {
 } ModbusSensor;
 
 
-// configure connected power sensors
-#define NUM_SENSORS 2
+// configure all connected PZEM-004T sensors
+#define NUM_SENSORS 4
 #define UART_PORT UART_NUM_2
+#define PUBLISH_INTERVAL_MS 30000
 ModbusSensor sensors[NUM_SENSORS] = {
     {
         .name = "Sensor 1",
         .modbus_addr = 1,
-        .tx_pin = GPIO_NUM_17,
-        .rx_pin = GPIO_NUM_16,
-        .mqtt_topic_prefix = "sensor1",
-        .publish_interval_ms = 5000,
+        .tx_pin = GPIO_NUM_16,
+        .rx_pin = GPIO_NUM_17,
+        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboy_links",
+        .publish_interval_ms = PUBLISH_INTERVAL_MS,
     },
     {
         .name = "Sensor 2",
         .modbus_addr = 2,
-        .tx_pin = GPIO_NUM_25,
-        .rx_pin = GPIO_NUM_26,
-        .mqtt_topic_prefix = "sensor2",
-        .publish_interval_ms = 7000,
+        .tx_pin = GPIO_NUM_16,
+        .rx_pin = GPIO_NUM_18,
+        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboy_rechts",
+        .publish_interval_ms = PUBLISH_INTERVAL_MS,
+    },
+    {
+        .name = "Sensor 3",
+        .modbus_addr = 3,
+        .tx_pin = GPIO_NUM_16,
+        .rx_pin = GPIO_NUM_19,
+        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodwe_links",
+        .publish_interval_ms = PUBLISH_INTERVAL_MS,
+    },
+    {
+        .name = "Sensor 4",
+        .modbus_addr = 4,
+        .tx_pin = GPIO_NUM_16,
+        .rx_pin = GPIO_NUM_21,
+        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodwe_rechts",
+        .publish_interval_ms = PUBLISH_INTERVAL_MS,
     }
 };
 
 
 
 
+// repeatedly read and publish all data of multiple sensors
+// where the UART interface is re-initialized for each sensor to 
+// allow individual uart pin configuration for each sensor
 void PMonTask(void *arg) {
     int64_t last_publish_time[NUM_SENSORS] = {0};
     _current_values_t pzValues;
@@ -205,8 +226,7 @@ void PMonTask(void *arg) {
 
         for (int i = 0; i < NUM_SENSORS; i++) {
             if ((now - last_publish_time[i]) >= sensors[i].publish_interval_ms) {
-
-                ESP_LOGI(TAG, "[%s] Initializing sensor at addr=0x%02X on TX=%d, RX=%d",
+                ESP_LOGI(TAG, "[%s] sensor is due for publishing, Initializing sensor at addr=0x%02X on TX=%d, RX=%d",
                          sensors[i].name,
                          sensors[i].modbus_addr,
                          sensors[i].tx_pin,
@@ -231,19 +251,42 @@ void PMonTask(void *arg) {
                     printf("[%s] Vrms: %.1fV - Irms: %.3fA - P: %.1fW - E: %.2fWh\n", sensors[i].name, pzValues.voltage, pzValues.current, pzValues.power, pzValues.energy);
                     printf("[%s] Freq: %.1fHz - PF: %.2f\n", sensors[i].name, pzValues.frequency, pzValues.pf);
 
-                    // Example MQTT publish (optional)
-                    // char topic[64], payload[64];
-                    // snprintf(topic, sizeof(topic), "%s/voltage", sensors[i].mqtt_topic_prefix);
-                    // snprintf(payload, sizeof(payload), "%.1f", pzValues.voltage);
-                    // esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+                        // publish all received values to the corresponding topics (with prefix of sensor)
+                        char topic[128];
+                        char payload[64];
+
+                        snprintf(topic, sizeof(topic), "%s/voltage", sensors[i].mqtt_topic_prefix);
+                        snprintf(payload, sizeof(payload), "%.1f", pzValues.voltage);
+                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+
+                        snprintf(topic, sizeof(topic), "%s/current", sensors[i].mqtt_topic_prefix);
+                        snprintf(payload, sizeof(payload), "%.3f", pzValues.current);
+                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+
+                        snprintf(topic, sizeof(topic), "%s/power", sensors[i].mqtt_topic_prefix);
+                        snprintf(payload, sizeof(payload), "%.1f", pzValues.power);
+                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+
+                        snprintf(topic, sizeof(topic), "%s/energy", sensors[i].mqtt_topic_prefix);
+                        snprintf(payload, sizeof(payload), "%.2f", pzValues.energy);
+                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+
+                        snprintf(topic, sizeof(topic), "%s/frequency", sensors[i].mqtt_topic_prefix);
+                        snprintf(payload, sizeof(payload), "%.1f", pzValues.frequency);
+                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+
+                        snprintf(topic, sizeof(topic), "%s/pf", sensors[i].mqtt_topic_prefix);
+                        snprintf(payload, sizeof(payload), "%.2f", pzValues.pf);
+                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
 
                 } else {
                     ESP_LOGW(TAG, "[%s] Failed to read sensor at addr=0x%02X", sensors[i].name, sensors[i].modbus_addr);
                 }
 
                 last_publish_time[i] = now;
-            }
-        }
+                printf("\n");
+            }// end if due for publishing
+        } // end for
 
         vTaskDelay(pdMS_TO_TICKS(100));
     }
@@ -255,39 +298,30 @@ void PMonTask(void *arg) {
 
 
 
-void app_main()
-{
+void app_main(void) {
+    ESP_LOGI(TAG, "[APP] Startup..");
+    ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+
+    ESP_LOGW(TAG, "Starting wifi...");
+    nvs_flash_init();
+    wifi_init_sta();
+    vTaskDelay(pdMS_TO_TICKS(6000));
+
+    //ESP_LOGW(TAG, "Configuring gpios...");
+    //gpio_reset_pin(BUZZER_GPIO);
+    //gpio_set_direction(BUZZER_GPIO, GPIO_MODE_OUTPUT);
+    //adc1_config_width(ADC_WIDTH_BIT_12);
+    //adc1_config_channel_atten(ADC_CHANNEL, ADC_ATTEN_DB_11);
+
+    ESP_LOGW(TAG, "Starting mqtt...");
+    mqtt_app_start();
+    vTaskDelay(pdMS_TO_TICKS(3000));
+
+    ESP_LOGW(TAG, "Starting publish task...");
     xTaskCreate(PMonTask, "PowerMonitor", 4096, NULL, 5, NULL);
+
 }
-
-
-
-
-
-//void app_main(void) {
-//    ESP_LOGI(TAG, "[APP] Startup..");
-//    ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
-//    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
-//
-//    //ESP_LOGW(TAG, "Starting wifi...");
-//    //nvs_flash_init();
-//    //wifi_init_sta();
-//    //vTaskDelay(pdMS_TO_TICKS(6000));
-//
-//    //ESP_LOGW(TAG, "Configuring gpios...");
-//    //gpio_reset_pin(BUZZER_GPIO);
-//    //gpio_set_direction(BUZZER_GPIO, GPIO_MODE_OUTPUT);
-//    //adc1_config_width(ADC_WIDTH_BIT_12);
-//    //adc1_config_channel_atten(ADC_CHANNEL, ADC_ATTEN_DB_11);
-//
-//    //ESP_LOGW(TAG, "Starting mqtt...");
-//    //mqtt_app_start();
-//    //vTaskDelay(pdMS_TO_TICKS(3000));
-//
-//    //ESP_LOGW(TAG, "Starting publish task...");
-//    //xTaskCreate(modbus_sensor_task, "modbus_sensor_task", 4096, NULL, 5, NULL);
-//
-//}
 
 
 
