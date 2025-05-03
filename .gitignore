@@ -1,0 +1,14 @@
+# VIM files
+*.swp
+*.swo
+
+
+#vscode
+.vscode
+
+
+#esp-idf
+build/
+#sdkconfig
+sdkconfig.old
+.devcontainer
