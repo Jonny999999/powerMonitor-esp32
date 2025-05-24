@@ -17,7 +17,7 @@
 
 
 //===== CONFIG =====
-#include "config.h" //actual wifi credentials outsourced
+#include "credentials.h" //actual wifi credentials outsourced
 //#define WIFI_SSID "E14_mqtt-broker"
 //#define WIFI_PASS "mqttdemo" // comment out if open wifi
 #define WIFI_USE_STATIC_IP       1
@@ -80,6 +80,28 @@ void wifi_init_sta(void) {
     esp_wifi_start();
     esp_wifi_connect();
 }
+
+
+static void wifi_event_handler(void* arg, esp_event_base_t event_base,
+                               int32_t event_id, void* event_data) {
+    if (event_base == WIFI_EVENT) {
+        switch (event_id) {
+            case WIFI_EVENT_STA_START:
+                ESP_LOGW("WiFi", "Connecting to WiFi...");
+                esp_wifi_connect();
+                break;
+            case WIFI_EVENT_STA_DISCONNECTED:
+                ESP_LOGE("WiFi", "Disconnected. Reconnecting...");
+                esp_wifi_connect();
+                break;
+        }
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI("WiFi", "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
+    }
+}
+
+
 
 
 
@@ -173,16 +195,20 @@ typedef struct {
 
 
 // configure all connected PZEM-004T sensors
-#define NUM_SENSORS 4
+#define NUM_SENSORS 4 // sensor count configured
 #define UART_PORT UART_NUM_2
-#define PUBLISH_INTERVAL_MS 30000
+#define PUBLISH_INTERVAL_MS 60000 // interval all sensor data is read and published for each sensor
+#define RETRY_INTERVAL_WHEN_READ_FAILED_MS 5000 //retry earlier than next interval when read failed
 ModbusSensor sensors[NUM_SENSORS] = {
+    // Note about connection: multiple sensors are connected to shared TX pin (master) 
+    //   but each has its own RX pin to send to the master
+    //   (shared RX would be shortcircuit since IDLE slaves pull active high)
     {
         .name = "Sensor 1",
         .modbus_addr = 1,
         .tx_pin = GPIO_NUM_16,
         .rx_pin = GPIO_NUM_17,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboy_links",
+        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboyLinks",
         .publish_interval_ms = PUBLISH_INTERVAL_MS,
     },
     {
@@ -190,7 +216,7 @@ ModbusSensor sensors[NUM_SENSORS] = {
         .modbus_addr = 2,
         .tx_pin = GPIO_NUM_16,
         .rx_pin = GPIO_NUM_18,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboy_rechts",
+        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboyRechts",
         .publish_interval_ms = PUBLISH_INTERVAL_MS,
     },
     {
@@ -198,7 +224,7 @@ ModbusSensor sensors[NUM_SENSORS] = {
         .modbus_addr = 3,
         .tx_pin = GPIO_NUM_16,
         .rx_pin = GPIO_NUM_19,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodwe_links",
+        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodweLinks",
         .publish_interval_ms = PUBLISH_INTERVAL_MS,
     },
     {
@@ -206,7 +232,7 @@ ModbusSensor sensors[NUM_SENSORS] = {
         .modbus_addr = 4,
         .tx_pin = GPIO_NUM_16,
         .rx_pin = GPIO_NUM_21,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodwe_rechts",
+        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodweRechts",
         .publish_interval_ms = PUBLISH_INTERVAL_MS,
     }
 };
@@ -247,9 +273,19 @@ void PMonTask(void *arg) {
                 ESP_LOGI(TAG, "[%s] Starting read from sensor addr=0x%02X", sensors[i].name, sensors[i].modbus_addr);
 
                 if (PzemGetValues(&config, &pzValues)) {
-                    ESP_LOGI(TAG, "[%s] Read success", sensors[i].name);
-                    printf("[%s] Vrms: %.1fV - Irms: %.3fA - P: %.1fW - E: %.2fWh\n", sensors[i].name, pzValues.voltage, pzValues.current, pzValues.power, pzValues.energy);
-                    printf("[%s] Freq: %.1fHz - PF: %.2f\n", sensors[i].name, pzValues.frequency, pzValues.pf);
+                    bool allZero = (pzValues.voltage == 0.0f && 
+                                    pzValues.current == 0.0f && 
+                                    pzValues.power == 0.0f && 
+                                    pzValues.energy == 0.0f && 
+                                    pzValues.frequency == 0.0f && 
+                                    pzValues.pf == 0.0f);
+                    if (allZero) {
+                        ESP_LOGE(TAG, "[%s] Read succeeded but returned all zeros – treating as failed", sensors[i].name);
+                        last_publish_time[i] += RETRY_INTERVAL_WHEN_READ_FAILED_MS; // when failed set next retry to faster interval
+                    } else {
+                        ESP_LOGI(TAG, "[%s] Read success", sensors[i].name);
+                        printf("[%s] Vrms: %.1fV - Irms: %.3fA - P: %.1fW - E: %.2fWh\n", sensors[i].name, pzValues.voltage, pzValues.current, pzValues.power, pzValues.energy);
+                        printf("[%s] Freq: %.1fHz - PF: %.2f\n", sensors[i].name, pzValues.frequency, pzValues.pf);
 
                         // publish all received values to the corresponding topics (with prefix of sensor)
                         char topic[128];
@@ -279,16 +315,18 @@ void PMonTask(void *arg) {
                         snprintf(payload, sizeof(payload), "%.2f", pzValues.pf);
                         esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
 
-                } else {
-                    ESP_LOGW(TAG, "[%s] Failed to read sensor at addr=0x%02X", sensors[i].name, sensors[i].modbus_addr);
+                        last_publish_time[i] = now; // success, set next read to configured interval
+                    } // endif - data is valid
+                } else { // else - read successfull -> read failed
+                    ESP_LOGE(TAG, "[%s] Failed to read sensor at addr=0x%02X", sensors[i].name, sensors[i].modbus_addr);
+                    last_publish_time[i] += RETRY_INTERVAL_WHEN_READ_FAILED_MS; // when failed set next retry to faster interval
                 }
 
-                last_publish_time[i] = now;
                 printf("\n");
-            }// end if due for publishing
-        } // end for
+            }// endif - is due for publishing
+        } // endfor - each configured sensor
 
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 
     vTaskDelete(NULL);
@@ -306,6 +344,10 @@ void app_main(void) {
     ESP_LOGW(TAG, "Starting wifi...");
     nvs_flash_init();
     wifi_init_sta();
+    // register event handler to automatically reconnect when connection lost
+    esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL);
+    esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL);
+
     vTaskDelay(pdMS_TO_TICKS(6000));
 
     //ESP_LOGW(TAG, "Configuring gpios...");

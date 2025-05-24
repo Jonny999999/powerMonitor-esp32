@@ -12,3 +12,8 @@ build/
 #sdkconfig
 sdkconfig.old
 .devcontainer
+
+
+
+#project specific
+credentials.h

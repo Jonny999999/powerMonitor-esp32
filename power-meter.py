@@ -96,15 +96,17 @@ client = ModbusSerialClient(
 if client.connect():
     try:
         ########## RUN DESIRED FUNCTION ##########
+
         # read all registers:
         read_data(client, slave)
 
-        # set slave address:
-        #set_slave_address(client, current_slave=slave, new_slave=1)
-
         # reset energy:
-        #reset_energy_pzem(port, slave)
+        reset_energy_pzem(port, slave)
 
+        # set slave address:
+        # change address and read after
+        set_slave_address(client, current_slave=slave, new_slave=4)
+        read_data(client, 4)
         pass  # remove this after choosing an action above
 
     except ModbusException as e:
