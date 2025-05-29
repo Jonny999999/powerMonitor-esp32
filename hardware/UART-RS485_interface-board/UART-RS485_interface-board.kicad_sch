@@ -4,6 +4,10 @@
 	(generator_version "9.0")
 	(uuid "a2b4af5a-3870-4d3d-a01f-c129a371c845")
 	(paper "A4")
+	(title_block
+		(title "Stripboard UART <=> RS485")
+		(date "2025-05-29")
+	)
 	(lib_symbols
 		(symbol "Connector:Screw_Terminal_01x02"
 			(pin_names
@@ -645,6 +649,167 @@
 				)
 			)
 			(symbol "C_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Device:C_Polarized"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0.254)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "C"
+				(at 0.635 2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "C_Polarized"
+				(at 0.635 -2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" ""
+				(at 0.9652 -3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Polarized capacitor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "cap capacitor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "CP_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "C_Polarized_0_1"
+				(rectangle
+					(start -2.286 0.508)
+					(end 2.286 1.016)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.778 2.286) (xy -0.762 2.286)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 2.794) (xy -1.27 1.778)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start 2.286 -0.508)
+					(end -2.286 -1.016)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+			)
+			(symbol "C_Polarized_1_1"
 				(pin passive line
 					(at 0 3.81 270)
 					(length 2.794)
@@ -2364,9 +2529,9 @@
 		)
 		(uuid cb357185-4cf0-459d-9777-59169046b687)
 	)
-	(text "RS485 Interface"
+	(text "RS485 Interface (3V3)"
 		(exclude_from_sim no)
-		(at 160.02 24.13 0)
+		(at 164.084 23.876 0)
 		(effects
 			(font
 				(size 2.2 2.2)
@@ -2398,6 +2563,16 @@
 			)
 		)
 		(uuid "b1725ecd-b2a1-49de-a1dc-d987125afa33")
+	)
+	(text "Note: using MAX485 with 3V3 worked well too but 100mV less voltage swing"
+		(exclude_from_sim no)
+		(at 182.118 82.55 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "d4de7cbc-d813-42fd-955f-83dfd863cd2d")
 	)
 	(text "1->3, 2->3: 12V\n3->1, 2->3: 7V"
 		(exclude_from_sim no)
@@ -2462,6 +2637,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "574ee3dd-4150-4ace-a853-052cb74379ca")
+	)
+	(junction
+		(at 185.42 99.06)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "68130199-d560-46bf-9b41-420886fd05a6")
 	)
 	(junction
 		(at 193.04 99.06)
@@ -2530,6 +2711,12 @@
 		(uuid "d0526c43-6ba0-472c-a41d-464e2d28a7b1")
 	)
 	(junction
+		(at 194.31 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "d0bb1422-e6a2-4df5-88f7-65e7a6d5a1aa")
+	)
+	(junction
 		(at 66.04 138.43)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2583,6 +2770,16 @@
 	)
 	(wire
 		(pts
+			(xy 194.31 101.6) (xy 195.58 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "09380d6d-0b8a-4ea2-8c82-074deea089bf")
+	)
+	(wire
+		(pts
 			(xy 233.68 34.29) (xy 233.68 43.18)
 		)
 		(stroke
@@ -2620,6 +2817,16 @@
 			(type default)
 		)
 		(uuid "0d64bd9d-7504-4f60-a32f-2eb07d913aa7")
+	)
+	(wire
+		(pts
+			(xy 185.42 99.06) (xy 193.04 99.06)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0f8850d3-86df-4eb6-a07b-e67612249d04")
 	)
 	(wire
 		(pts
@@ -2670,6 +2877,16 @@
 			(type default)
 		)
 		(uuid "1e65f685-112f-43b7-a201-f77ee7d58a6a")
+	)
+	(wire
+		(pts
+			(xy 194.31 110.49) (xy 194.31 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "22a004fc-f899-43b6-b3e8-1be75e4861ab")
 	)
 	(wire
 		(pts
@@ -2943,7 +3160,7 @@
 	)
 	(wire
 		(pts
-			(xy 173.99 99.06) (xy 193.04 99.06)
+			(xy 173.99 99.06) (xy 185.42 99.06)
 		)
 		(stroke
 			(width 0)
@@ -2980,6 +3197,16 @@
 			(type default)
 		)
 		(uuid "6a95631c-55b7-4e99-b564-bdfb6ba18fbc")
+	)
+	(wire
+		(pts
+			(xy 185.42 99.06) (xy 185.42 110.49)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6d92f42b-03cd-49d2-932b-0da30dfa8e9c")
 	)
 	(wire
 		(pts
@@ -3253,7 +3480,7 @@
 	)
 	(wire
 		(pts
-			(xy 176.53 101.6) (xy 195.58 101.6)
+			(xy 176.53 101.6) (xy 194.31 101.6)
 		)
 		(stroke
 			(width 0)
@@ -3587,7 +3814,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Capacitor_THT:C_Disc_D7.0mm_W2.5mm_P5.00mm"
+		(property "Footprint" "Capacitor_THT:C_Disc_D7.5mm_W5.0mm_P7.50mm"
 			(at 191.4652 39.37 0)
 			(effects
 				(font
@@ -3713,6 +3940,71 @@
 			(project "ESP32-RS485_interface-board"
 				(path "/a2b4af5a-3870-4d3d-a01f-c129a371c845"
 					(reference "U2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 222.25 104.14 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "0c6654c8-95bb-4309-8c7d-c353c5cfa845")
+		(property "Reference" "#PWR07"
+			(at 222.25 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 222.25 107.95 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 222.25 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 222.25 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 222.25 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "e8fa3671-d853-42a4-87bb-8677e4f6c058")
+		)
+		(instances
+			(project "UART-RS485_interface-board"
+				(path "/a2b4af5a-3870-4d3d-a01f-c129a371c845"
+					(reference "#PWR07")
 					(unit 1)
 				)
 			)
@@ -4116,6 +4408,71 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+3V3")
+		(at 222.25 96.52 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "35b8401f-506f-42c7-a0b2-c8ed05a2a810")
+		(property "Reference" "#PWR08"
+			(at 222.25 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+3V3"
+			(at 222.25 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 222.25 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 222.25 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3V3\""
+			(at 222.25 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "8d41a3ee-7277-4fd9-93b0-4213dd9d595a")
+		)
+		(instances
+			(project "UART-RS485_interface-board"
+				(path "/a2b4af5a-3870-4d3d-a01f-c129a371c845"
+					(reference "#PWR08")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Connector:Screw_Terminal_01x02")
 		(at 168.91 99.06 0)
 		(mirror y)
@@ -4133,7 +4490,7 @@
 				)
 			)
 		)
-		(property "Value" "3V3, GND"
+		(property "Value" "GND, 3v3"
 			(at 161.036 100.33 0)
 			(effects
 				(font
@@ -4448,6 +4805,73 @@
 	)
 	(symbol
 		(lib_id "Connector:TestPoint")
+		(at 185.42 110.49 0)
+		(mirror x)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "6f3531a7-ef50-46c1-807e-689bf2cec1b8")
+		(property "Reference" "TP6"
+			(at 186.436 115.062 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "3v3"
+			(at 186.436 112.522 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 190.5 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 190.5 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 185.42 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "bf051d42-07f7-41f9-aa89-0e7c3f31a09b")
+		)
+		(instances
+			(project "UART-RS485_interface-board"
+				(path "/a2b4af5a-3870-4d3d-a01f-c129a371c845"
+					(reference "TP6")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
 		(at 166.37 62.23 0)
 		(mirror x)
 		(unit 1)
@@ -4531,7 +4955,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "RS485 (Sensor)"
+		(property "Value" "[GND, A, B] RS485 (Sensor)"
 			(at 250.19 53.3399 0)
 			(effects
 				(font
@@ -4645,6 +5069,143 @@
 			(project "ESP32-RS485_interface-board"
 				(path "/a2b4af5a-3870-4d3d-a01f-c129a371c845"
 					(reference "#PWR01")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Polarized")
+		(at 222.25 100.33 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "76d3bcf7-e7e7-44e4-b601-8e96d3926dff")
+		(property "Reference" "C2"
+			(at 226.06 98.1709 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10uf"
+			(at 226.06 100.7109 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D8.0mm_P5.00mm"
+			(at 223.2152 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 222.25 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Polarized capacitor"
+			(at 222.25 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "f3bde247-479d-4c28-95f8-fe91b020f74a")
+		)
+		(pin "1"
+			(uuid "0e67f82f-c781-4182-8238-ffbefac58ee4")
+		)
+		(instances
+			(project ""
+				(path "/a2b4af5a-3870-4d3d-a01f-c129a371c845"
+					(reference "C2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 194.31 110.49 0)
+		(mirror x)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7d45d802-d38b-4bb9-b4c4-db8fd41fe7e5")
+		(property "Reference" "TP7"
+			(at 195.326 115.062 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "gnd"
+			(at 195.326 112.522 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x01_P2.54mm_Vertical"
+			(at 199.39 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 199.39 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "test point"
+			(at 194.31 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "10393610-d58a-44db-8bb5-a95652281f8f")
+		)
+		(instances
+			(project "UART-RS485_interface-board"
+				(path "/a2b4af5a-3870-4d3d-a01f-c129a371c845"
+					(reference "TP7")
 					(unit 1)
 				)
 			)
@@ -4801,7 +5362,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "470"
+		(property "Value" "3k3"
 			(at 204.724 69.088 0)
 			(effects
 				(font
@@ -4870,7 +5431,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "470"
+		(property "Value" "3k3"
 			(at 204.724 38.608 0)
 			(effects
 				(font
@@ -5145,7 +5706,7 @@
 				)
 			)
 		)
-		(property "Value" "3V3, GND"
+		(property "Value" "GND, 3v3"
 			(at 203.454 100.33 90)
 			(effects
 				(font
@@ -5567,8 +6128,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "UART (ESP32)"
-			(at 166.37 95.2499 0)
+		(property "Value" "[TX, DIR, RX] UART (ESP32)"
+			(at 165.1 95.25 0)
 			(effects
 				(font
 					(size 1.27 1.27)
