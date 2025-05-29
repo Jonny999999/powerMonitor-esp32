@@ -13,7 +13,7 @@
 //#define WIFI_SSID "E14_mqtt-broker"
 //#define WIFI_PASS "mqttdemo" // comment out if open wifi
 #define WIFI_USE_STATIC_IP       1
-#define WIFI_STATIC_IP_ADDR      "10.0.0.81"
+#define WIFI_STATIC_IP_ADDR      "10.0.0.82"
 #define WIFI_STATIC_NETMASK_ADDR "255.255.0.0"
 #define WIFI_STATIC_GW_ADDR      "10.0.0.1"
 
@@ -23,50 +23,33 @@
 
 // Local config for this ESP32 instance
 // configure all connected PZEM-004T sensors
-#define PUBLISH_INTERVAL_MS 60000 // interval all sensor data is read and published for each sensor
+//#define PUBLISH_INTERVAL_MS 60000 // interval all sensor data is read and published for each sensor
+#define PUBLISH_INTERVAL_MS 10000 // interval all sensor data is read and published for each sensor
 #define RETRY_INTERVAL_WHEN_READ_FAILED_MS 5000 //retry earlier than next interval when read failed
 const ModbusSensor sensors[] = {
     // Note about connection: multiple sensors are connected to shared TX pin (master) 
     //   but each has its own RX pin to send to the master
     //   (shared RX would be shortcircuit since IDLE slaves pull active high)
+
+    // Note:TX0/GPIO10 and RX0/GPIO9 cant be used multiple times, due to crash sometimes when re-configuring it
     {
-        .name = "Sensor 1",
+        .name = "Sensor1, 0x1 - links",
         .modbus_addr = 1,
-        .tx_pin = GPIO_NUM_16,
-        .rx_pin = GPIO_NUM_17,
-        .use_rs485 = false,
-        .rs485_dir_pin = GPIO_NUM_NC,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboyLinks",
-        .publish_interval_ms = PUBLISH_INTERVAL_MS,
-    },
-    {
-        .name = "Sensor 2",
-        .modbus_addr = 2,
-        .tx_pin = GPIO_NUM_16,
-        .rx_pin = GPIO_NUM_18,
-        .use_rs485 = false,
-        .rs485_dir_pin = GPIO_NUM_NC,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboyRechts",
-        .publish_interval_ms = PUBLISH_INTERVAL_MS,
-    },
-    {
-        .name = "Sensor 3",
-        .modbus_addr = 3,
-        .tx_pin = GPIO_NUM_16,
+        .tx_pin = GPIO_NUM_18,
         .rx_pin = GPIO_NUM_19,
-        .use_rs485 = false,
-        .rs485_dir_pin = GPIO_NUM_NC,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodweLinks",
+        .use_rs485 = true,
+        .rs485_dir_pin = GPIO_NUM_21,
+        .mqtt_topic_prefix = "Sensordaten/PV/NeueSchupfe/sunnyboyLinks",
         .publish_interval_ms = PUBLISH_INTERVAL_MS,
     },
     {
-        .name = "Sensor 4",
-        .modbus_addr = 4,
-        .tx_pin = GPIO_NUM_16,
-        .rx_pin = GPIO_NUM_21,
-        .use_rs485 = false,
-        .rs485_dir_pin = GPIO_NUM_NC,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodweRechts",
+        .name = "Sensor2, 0xA5 - rechts",
+        .modbus_addr = 0xA5, //165 Note: using significantly different than 1 so sensors dont get confused
+        .tx_pin = GPIO_NUM_18,
+        .rx_pin = GPIO_NUM_19,
+        .use_rs485 = true,
+        .rs485_dir_pin = GPIO_NUM_21,
+        .mqtt_topic_prefix = "Sensordaten/PV/NeueSchupfe/sunnyboyRechts",
         .publish_interval_ms = PUBLISH_INTERVAL_MS,
     }
 };
