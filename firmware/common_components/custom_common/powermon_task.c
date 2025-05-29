@@ -31,18 +31,22 @@ void common_PMonTask(void *arg) {
         // loop through all configured sensors
         for (int i = 0; i < sensor_count; i++) {
             if ((now - last_publish_time[i]) >= sensors[i].publish_interval_ms) {
-                ESP_LOGI(TAG, "[%s] Due for publish. Init sensor addr=0x%02X TX=%d RX=%d",
+
+                ESP_LOGI(TAG, "[%s] Due for publish. Init sensor addr=0x%02X TX=%d RX=%d RS485-MODE=%d",
                          sensors[i].name,
                          sensors[i].modbus_addr,
                          sensors[i].tx_pin,
-                         sensors[i].rx_pin);
+                         sensors[i].rx_pin,
+                         sensors[i].use_rs485);
 
                 // Create new uart config for this sensor
                 pzem_setup_t config = {
                     .pzem_uart   = uart_port,
                     .pzem_rx_pin = sensors[i].rx_pin,
                     .pzem_tx_pin = sensors[i].tx_pin,
-                    .pzem_addr   = sensors[i].modbus_addr
+                    .pzem_addr   = sensors[i].modbus_addr,
+                    .use_rs485   = sensors[i].use_rs485,
+                    .rs485_dir_pin = sensors[i].rs485_dir_pin
                 };
 
                 // Initialize pins/config
@@ -102,6 +106,10 @@ void common_PMonTask(void *arg) {
                     ESP_LOGE(TAG, "[%s] Failed to read sensor at addr=0x%02X", sensors[i].name, sensors[i].modbus_addr);
                     last_publish_time[i] += retry_interval_ms; // when failed set next retry to faster interval
                 }
+
+                // ensure there is a small delay between sensor readouts (prevents wrong sensor answering or all data 0)
+                if (sensors[i].use_rs485)
+                    vTaskDelay(pdMS_TO_TICKS(200));
 
                 printf("\n");
             }// endif - is due for publishing

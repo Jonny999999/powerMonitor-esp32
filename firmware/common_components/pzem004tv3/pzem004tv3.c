@@ -55,8 +55,29 @@ void PzemInit( pzem_setup_t *pzSetup )
     ESP_ERROR_CHECK( uart_param_config( _uart_num, &uart_config ) );
 
     /* Set UART pins(TX: , RX: , RTS: -1, CTS: -1) */
-    ESP_ERROR_CHECK( uart_set_pin( _uart_num, pzSetup->pzem_tx_pin, pzSetup->pzem_rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE ) );
+    if (pzSetup->use_rs485) {
+        // RS485 mode additionally requires RTS pin
+        ESP_LOGI(LOG_TAG, "Configuring RS485 half-duplex mode with RTS on GPIO %d", pzSetup->rs485_dir_pin);
+        ESP_ERROR_CHECK(uart_set_pin(
+            _uart_num,
+            pzSetup->pzem_tx_pin,
+            pzSetup->pzem_rx_pin,
+            pzSetup->rs485_dir_pin,  // RTS = DE/RE control
+            UART_PIN_NO_CHANGE
+        ));
+        // enable half duplex mode so RTS pin is actually controlled
+        ESP_ERROR_CHECK(uart_set_mode(_uart_num, UART_MODE_RS485_HALF_DUPLEX));
 
+    } else {
+        // TTL mode does not require DIR/RTS pin
+        ESP_ERROR_CHECK(uart_set_pin(
+            _uart_num,
+            pzSetup->pzem_tx_pin,
+            pzSetup->pzem_rx_pin,
+            UART_PIN_NO_CHANGE,
+            UART_PIN_NO_CHANGE
+        ));
+    }
 }
 
 
@@ -187,6 +208,9 @@ bool PzResetEnergy( pzem_setup_t *pzSetup )
 bool PzemSendCmd8( pzem_setup_t *pzSetup, uint8_t cmd, uint16_t regAddr, uint16_t regVal, bool check, uint16_t slave_addr )
 {
     static const char *LOG_TAG = "PZ_SEND8";
+
+    // flush RX buffer before sending any new request
+    uart_flush_input(pzSetup->pzem_uart);
 
     /* send and receive buffers memory allocation */
     uint8_t txdata[TX_BUF_SIZE] = {0};

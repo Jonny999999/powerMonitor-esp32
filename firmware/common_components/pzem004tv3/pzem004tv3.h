@@ -24,6 +24,8 @@ typedef struct pz_conf_t {
     uint8_t pzem_rx_pin;
     uint8_t pzem_tx_pin;
     uint8_t pzem_addr;
+    bool use_rs485;           // true: RS485, also requires DIR-pin, false: TTL mode
+    gpio_num_t rs485_dir_pin; // only used when use_rs485 == true
 } pzem_setup_t;
 
 /***
