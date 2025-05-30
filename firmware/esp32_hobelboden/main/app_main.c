@@ -23,8 +23,7 @@
 
 // Local config for this ESP32 instance
 // configure all connected PZEM-004T sensors
-//#define PUBLISH_INTERVAL_MS 60000 // interval all sensor data is read and published for each sensor
-#define PUBLISH_INTERVAL_MS 10000 // interval all sensor data is read and published for each sensor
+#define PUBLISH_INTERVAL_MS 60000 // interval all sensor data is read and published for each sensor
 #define RETRY_INTERVAL_WHEN_READ_FAILED_MS 2000 //retry earlier than next interval when read failed
 const ModbusSensor sensors[] = {
     // Note about connection: multiple sensors are connected to shared TX pin (master) 

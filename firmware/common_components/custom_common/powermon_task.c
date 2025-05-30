@@ -2,6 +2,9 @@
 #include "pzem004tv3.h"
 #include "esp_log.h"
 
+// instead of publishing sensors, reset energy values of all configured devices, then stop
+#define RESET_ENERGY_OF_ALL_MODULES 0
+
 #define TAG "common_PMon"
 
 
@@ -51,6 +54,21 @@ void common_PMonTask(void *arg) {
 
                 // Initialize pins/config
                 PzemInit(&config);
+
+#if RESET_ENERGY_OF_ALL_MODULES
+                ESP_LOGW(TAG, "RESET_ENERGY_OF_ALL_MODULES mode enabled -> resetting device %d", i);
+                bool PzResetEnergy( pzem_setup_t *pzSetup );
+                if (PzResetEnergy(&config)){
+                    ESP_LOGI(TAG, "[%s] Successfully reset Energy", sensors[i].name);
+                    PzemGetValues(&config, &pzValues);
+                    ESP_LOGI(TAG, "[%s] verifying energy value... addr=0x%02X  read Energy=%.3f", sensors[i].name, sensors[i].modbus_addr, pzValues.energy);
+                }
+                else {
+                    ESP_LOGE(TAG, "[%s] Failed to reset Energy", sensors[i].name);
+                }
+                vTaskDelay(pdMS_TO_TICKS(300));
+                continue;
+#endif
 
                 // Log before read
                 ESP_LOGI(TAG, "[%s] Starting read from sensor addr=0x%02X", sensors[i].name, sensors[i].modbus_addr);
@@ -114,6 +132,14 @@ void common_PMonTask(void *arg) {
                 printf("\n");
             }// endif - is due for publishing
         } // endfor - each configured sensor
+
+        // when in reset mode, stop here forever
+#if RESET_ENERGY_OF_ALL_MODULES
+        ESP_LOGW(TAG, "Finished resetting all devices, stopping...");
+        ESP_LOGW(TAG, "Note: press reset button to reset again or disable this mode and flash again");
+        vTaskDelay(portMAX_DELAY);
+        while(1);
+#endif
 
         vTaskDelay(pdMS_TO_TICKS(500));
     } // end while(1)
