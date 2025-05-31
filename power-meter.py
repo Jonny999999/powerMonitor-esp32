@@ -11,6 +11,7 @@ def read_data(client, slave):
         print("Read error:", result)
         return
     regs = result.registers
+    print(f"\nReading slave {slave}")
     print("Raw Registers:", regs)
 
     voltage = regs[0] / 10.0
@@ -35,7 +36,7 @@ def read_data(client, slave):
 
 def set_slave_address(client, current_slave, new_slave):
     # This writes a single register at 0x0002 with the new address (1–247)
-    print(f"Setting address from {current_slave} to {new_slave}...")
+    print(f"\nSetting address from {current_slave} to {new_slave}...")
     result = client.write_register(address=0x0002, value=new_slave, slave=current_slave)
     if result.isError():
         print("Failed to set address:", result)
@@ -56,6 +57,7 @@ def crc16(data: bytes):
     return crc
 
 def reset_energy_pzem(port="/dev/ttyUSB0", slave_address=0x01):
+    print(f"\nresetting Energy value for slave {slave_address}...")
     # Construct command: [slave_address, 0x42]
     payload = bytes([slave_address, 0x42])
     crc = crc16(payload)
@@ -97,16 +99,16 @@ if client.connect():
     try:
         ########## RUN DESIRED FUNCTION ##########
 
-        # read all registers:
+        # == read all registers: ==
         read_data(client, slave)
 
-        # reset energy:
+        # == reset energy: ==
         reset_energy_pzem(port, slave)
 
-        # set slave address:
-        # change address and read after
-        set_slave_address(client, current_slave=slave, new_slave=4)
-        read_data(client, 4)
+        # == set slave address: ==
+        new_addr = 0xA5
+        set_slave_address(client, current_slave=slave, new_slave=new_addr)
+        read_data(client, new_addr)
         pass  # remove this after choosing an action above
 
     except ModbusException as e:

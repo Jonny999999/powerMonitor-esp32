@@ -55,8 +55,29 @@ void PzemInit( pzem_setup_t *pzSetup )
     ESP_ERROR_CHECK( uart_param_config( _uart_num, &uart_config ) );
 
     /* Set UART pins(TX: , RX: , RTS: -1, CTS: -1) */
-    ESP_ERROR_CHECK( uart_set_pin( _uart_num, pzSetup->pzem_tx_pin, pzSetup->pzem_rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE ) );
+    if (pzSetup->use_rs485) {
+        // RS485 mode additionally requires RTS pin
+        ESP_LOGI(LOG_TAG, "Configuring RS485 half-duplex mode with RTS on GPIO %d", pzSetup->rs485_dir_pin);
+        ESP_ERROR_CHECK(uart_set_pin(
+            _uart_num,
+            pzSetup->pzem_tx_pin,
+            pzSetup->pzem_rx_pin,
+            pzSetup->rs485_dir_pin,  // RTS = DE/RE control
+            UART_PIN_NO_CHANGE
+        ));
+        // enable half duplex mode so RTS pin is actually controlled
+        ESP_ERROR_CHECK(uart_set_mode(_uart_num, UART_MODE_RS485_HALF_DUPLEX));
 
+    } else {
+        // TTL mode does not require DIR/RTS pin
+        ESP_ERROR_CHECK(uart_set_pin(
+            _uart_num,
+            pzSetup->pzem_tx_pin,
+            pzSetup->pzem_rx_pin,
+            UART_PIN_NO_CHANGE,
+            UART_PIN_NO_CHANGE
+        ));
+    }
 }
 
 
@@ -145,33 +166,33 @@ bool PzSetAddress(pzem_setup_t *pzSetup, uint8_t new_addr)
  * @param pzSetup
  * @return bool
  */
-bool PzResetEnergy( pzem_setup_t *pzSetup )
+ bool PzResetEnergy( pzem_setup_t *pzSetup )
 {
     static const char *LOG_TAG = "PZ_RESET_ENERGY";
-    uint8_t buffer[4] = {0};
-    uint8_t reply[5] = {0};
+    uint8_t buffer[4] = {0};  // 2 bytes + 2 bytes CRC
+    uint8_t reply[4] = {0};
 
-    memset(buffer, 0, sizeof(buffer));
-    memset(reply, 0, sizeof(reply));
+    buffer[0] = pzSetup->pzem_addr;  // same as slave_address
+    buffer[1] = CMD_REST;            // 0x42
+    // buffer[2]: CRC low byte
+    // buffer[3]: CRC high byte
 
-    buffer[ 0 ] = pzSetup->pzem_addr;
-    buffer[ 1 ] = 0x00;
-    buffer[ 2 ] = CMD_REST;
-    buffer[ 3 ] = 0x00;
-    buffer[ 4 ] = 0x00;
+    PzemSetCRC(buffer, 4);           // CRC over first 2 bytes, write into buffer[2], buffer[3]
 
-    (void)PzemSetCRC( buffer, 4 );
-    if (uart_write_bytes( pzSetup->pzem_uart, buffer, 4 ) == -1) {
+    if (uart_write_bytes(pzSetup->pzem_uart, buffer, 4) == -1) {
         ESP_LOGE(LOG_TAG, "Failed to write to sensor/UART !!");
-    }
-
-    uint16_t length = PzemReceive( pzSetup, reply, 5 );
-
-    if ( ( length == 0 ) || ( length == 5 ) ) {
         return false;
     }
 
-    return true;
+    vTaskDelay(pdMS_TO_TICKS(100));  // wait a little, just like Python version
+
+    // Read optional reply (usually nothing or echo)
+    uint16_t length = PzemReceive(pzSetup, reply, sizeof(reply));
+
+    ESP_LOGI(LOG_TAG, "Sent reset, got %d bytes reply", length);
+    ESP_LOG_BUFFER_HEXDUMP(LOG_TAG, reply, length, ESP_LOG_INFO);
+
+    return true;  // no specific response required
 }
 
 /**
@@ -187,6 +208,9 @@ bool PzResetEnergy( pzem_setup_t *pzSetup )
 bool PzemSendCmd8( pzem_setup_t *pzSetup, uint8_t cmd, uint16_t regAddr, uint16_t regVal, bool check, uint16_t slave_addr )
 {
     static const char *LOG_TAG = "PZ_SEND8";
+
+    // flush RX buffer before sending any new request
+    uart_flush_input(pzSetup->pzem_uart);
 
     /* send and receive buffers memory allocation */
     uint8_t txdata[TX_BUF_SIZE] = {0};
