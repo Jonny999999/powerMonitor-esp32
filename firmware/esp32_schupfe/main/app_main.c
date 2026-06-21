@@ -29,26 +29,26 @@ const ModbusSensor sensors[] = {
     // Note about connection: multiple sensors are connected to shared TX pin (master) 
     //   but each has its own RX pin to send to the master
     //   (shared RX would be shortcircuit since IDLE slaves pull active high)
-    {
-        .name = "Sensor 1",
-        .modbus_addr = 1,
-        .tx_pin = GPIO_NUM_16,
-        .rx_pin = GPIO_NUM_17,
-        .use_rs485 = false,
-        .rs485_dir_pin = GPIO_NUM_NC,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboyLinks",
-        .publish_interval_ms = PUBLISH_INTERVAL_MS,
-    },
-    {
-        .name = "Sensor 2",
-        .modbus_addr = 2,
-        .tx_pin = GPIO_NUM_16,
-        .rx_pin = GPIO_NUM_18,
-        .use_rs485 = false,
-        .rs485_dir_pin = GPIO_NUM_NC,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboyRechts",
-        .publish_interval_ms = PUBLISH_INTERVAL_MS,
-    },
+      // {
+      //     .name = "Sensor 1",
+      //     .modbus_addr = 1,
+      //     .tx_pin = GPIO_NUM_16,
+      //     .rx_pin = GPIO_NUM_17,
+      //     .use_rs485 = false,
+      //     .rs485_dir_pin = GPIO_NUM_NC,
+      //     .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboyLinks",
+      //     .publish_interval_ms = PUBLISH_INTERVAL_MS,
+      // },
+      // {
+      //     .name = "Sensor 2",
+      //     .modbus_addr = 2,
+      //     .tx_pin = GPIO_NUM_16,
+      //     .rx_pin = GPIO_NUM_18,
+      //     .use_rs485 = false,
+      //     .rs485_dir_pin = GPIO_NUM_NC,
+      //     .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/sunnyboyRechts",
+      //     .publish_interval_ms = PUBLISH_INTERVAL_MS,
+      // },
     {
         .name = "Sensor 3",
         .modbus_addr = 3,
@@ -59,16 +59,16 @@ const ModbusSensor sensors[] = {
         .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodweLinks",
         .publish_interval_ms = PUBLISH_INTERVAL_MS,
     },
-    {
-        .name = "Sensor 4",
-        .modbus_addr = 4,
-        .tx_pin = GPIO_NUM_16,
-        .rx_pin = GPIO_NUM_21,
-        .use_rs485 = false,
-        .rs485_dir_pin = GPIO_NUM_NC,
-        .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodweRechts",
-        .publish_interval_ms = PUBLISH_INTERVAL_MS,
-    }
+     // {
+     //     .name = "Sensor 4",
+     //     .modbus_addr = 4,
+     //     .tx_pin = GPIO_NUM_16,
+     //     .rx_pin = GPIO_NUM_21,
+     //     .use_rs485 = false,
+     //     .rs485_dir_pin = GPIO_NUM_NC,
+     //     .mqtt_topic_prefix = "Sensordaten/PV/Schupfe/goodweRechts",
+     //     .publish_interval_ms = PUBLISH_INTERVAL_MS,
+     // }
 };
 
 
