@@ -120,32 +120,36 @@ void common_PMonTask(void *arg) {
                         // publish all received values to the corresponding topics (with prefix of sensor)
                         char topic[128];
                         char payload[64];
+                        int pub_ok = 1;
 
                         snprintf(topic, sizeof(topic), "%s/voltage", sensors[i].mqtt_topic_prefix);
                         snprintf(payload, sizeof(payload), "%.1f", pzValues.voltage);
-                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+                        if (esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0) < 0) pub_ok = 0;
 
                         snprintf(topic, sizeof(topic), "%s/current", sensors[i].mqtt_topic_prefix);
                         snprintf(payload, sizeof(payload), "%.3f", pzValues.current);
-                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+                        if (esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0) < 0) pub_ok = 0;
 
                         snprintf(topic, sizeof(topic), "%s/power", sensors[i].mqtt_topic_prefix);
                         snprintf(payload, sizeof(payload), "%.1f", pzValues.power);
-                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+                        if (esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0) < 0) pub_ok = 0;
 
                         snprintf(topic, sizeof(topic), "%s/energy", sensors[i].mqtt_topic_prefix);
                         snprintf(payload, sizeof(payload), "%.2f", pzValues.energy);
-                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+                        if (esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0) < 0) pub_ok = 0;
 
                         snprintf(topic, sizeof(topic), "%s/frequency", sensors[i].mqtt_topic_prefix);
                         snprintf(payload, sizeof(payload), "%.1f", pzValues.frequency);
-                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+                        if (esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0) < 0) pub_ok = 0;
 
                         snprintf(topic, sizeof(topic), "%s/pf", sensors[i].mqtt_topic_prefix);
                         snprintf(payload, sizeof(payload), "%.2f", pzValues.pf);
-                        esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0);
+                        if (esp_mqtt_client_publish(mqtt_client, topic, payload, 0, 1, 0) < 0) pub_ok = 0;
 
-                        last_publish_time[i] = now; // success, set next read to configured interval
+                        if (!pub_ok) {
+                            ESP_LOGW(TAG, "[%s] MQTT publish failed (broker disconnected?), data dropped", sensors[i].name);
+                        }
+                        last_publish_time[i] = now; // set next read regardless; MQTT will reconnect on its own
                     } // endif - data is valid
                 } else { // else - read successfull -> read failed
                     ESP_LOGE(TAG, "[%s] Failed to read sensor at addr=0x%02X", sensors[i].name, sensors[i].modbus_addr);
